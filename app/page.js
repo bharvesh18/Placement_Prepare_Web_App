@@ -1,7 +1,6 @@
 "use client"
 import { FaBrain, FaChartBar, FaFileUpload } from "react-icons/fa";
 import {useRef, useState} from "react";
-import {analyzeResume} from "../services/geminiService"
 import {motion} from "framer-motion"
 import { FaFilePdf } from "react-icons/fa";
 import { FaEye } from "react-icons/fa";
@@ -11,12 +10,38 @@ export default function Home() {
   const [file,setFile]=useState(null);
   const [fileURL,setFileURL]=useState(null);
   const [analysis,setAnalysis]=useState(null);
+  const [error,setError]=useState(null);
   const [jobrole,setJobRole]=useState(null);
   const [experience,setExperience]=useState(null);
   const [description,setDescription]=useState(null);
   const handleClick=()=>{
     fileInputRef.current.click();
   }
+
+async function extractText(file) {
+   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf");
+
+  const arrayBuffer = await file.arrayBuffer();
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+
+  const pdf = await pdfjsLib.getDocument({
+    data: arrayBuffer,
+    disableWorker: true,
+  }).promise;
+
+  let text = "";
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+
+    const strings = content.items.map(item => item.str || "");
+    text += strings.join(" ");
+  }
+
+  return text;
+}
   const handleFileChange=(e)=>{
     /*
     This function sets the file state to the uploaded file and creates a object URl which can 
@@ -24,10 +49,10 @@ export default function Home() {
     */
     const selectedfile=e.target.files[0];
     if(selectedfile){
+      setError(null);
       setFile(selectedfile);
-      setFileURL(URL.createObjectURL(selectedfile))
+      setFileURL(URL.createObjectURL(selectedfile));
     }
-    console.log(file);
   }
   const handleAnalysis=async ()=>{
     if(!file){
@@ -43,29 +68,38 @@ export default function Home() {
     state to the generated analysis.
     */
     try{
-      const formData = new FormData();
-      formData.append('file',file);
-      const response = await fetch('/api/parse-pdf', {
+      setError(null);
+      if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+        throw new Error('Client-side parsing only supports PDF files right now.');
+      }
+
+      const text = await extractText(file);
+      if (!text.trim()) {
+        throw new Error('Unable to extract text from the selected PDF.');
+      }
+
+      const response = await fetch('/api/analyze-resume', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          jobrole,
+          experience,
+          description,
+        }),
       });
-      
+
+      const result = await response.json();
       if (!response.ok) {
-      const errorText = await response.text();
-      console.error("API Error Response:", errorText);
-      throw new Error("Failed to parse PDF");
-    }
-      
-      const data = await response.json();
-      if (!data.text) {
-      throw new Error("No text returned from API");
-    }
-      console.log(data.text);
-      const analysis = await analyzeResume(data.text,jobrole,experience,description);
-      setAnalysis(analysis);
+        throw new Error(result.error || 'Failed to analyze resume');
+      }
+
+      setAnalysis(result);
     }
     catch(error){
-      alert("Error happened while analysing resume: " + error.message)
+      setError(error?.message || 'Error happened while analysing resume')
+      setAnalysis(null)
+      console.error('Resume analysis error:', error)
     }
   }
   const clearSelection=(e)=>{
@@ -73,6 +107,7 @@ export default function Home() {
     setFile(null);
     setFileURL(null);
     setAnalysis(null);
+    setError(null);
     setJobRole(null);
     setDescription(null);
     setExperience(null);
@@ -90,6 +125,9 @@ export default function Home() {
       <div className="hero-section mt-25px text-center text-white">
         <h2 className="hero-heading">Get Your Resume Analyzed Instantly</h2>
         <p>Improve your ATS score, optimize keywords, and get actionable insights to land more interviews.</p>
+        {error && (
+          <p className="text-red-400 mt-4 font-semibold">{error}</p>
+        )}
       </div>
       {!file ? (
       <motion.div
@@ -101,22 +139,22 @@ export default function Home() {
       <div className="flex flex-row gap-5 mt-[80px]">
         <div className="exp-details flex flex-col justify-center items-center">
           <div className="flex flex-col">
-          <label for="role" className="text-white font-semibold">Enter Your Job Role</label>
+          <label htmlFor="role" className="text-white font-semibold">Enter Your Job Role</label>
           <input type="text" placeholder="Enter Job role" id="role" className="w-74 border-2 border-purple-400 p-3 rounded-2xl mt-3 mb-3 outline-none placeholder-gray-300 text-white" onChange={(e)=>{setJobRole(e.target.value)}}></input>
           </div>
           <div className="flex flex-col">
-          <label for="exp" className="text-white font-semibold">Enter Job Experience</label>
+          <label htmlFor="exp" className="text-white font-semibold">Enter Job Experience</label>
           <input type="text" placeholder="Enter work experience in years" id="role" className="w-74 border-2 border-purple-400 p-3 rounded-2xl mt-3 mb-3 outline-none placeholder-gray-300 text-white" onChange={(e)=>{setExperience(e.target.value)}}></input>
           </div>
           <div className="flex flex-col">
-          <label for="desc" className="text-white font-semibold">Paste Job Description</label>
+          <label htmlFor="desc" className="text-white font-semibold">Paste Job Description</label>
           <textarea rows={5} cols={10} id="desc" placeholder="Job Description..." className="w-74 p-3 rounded-2xl mt-3 mb-3 outline-none border border-white/20 bg-white/5 text-white placeholder-white/50 resize-none" onChange={(e)=>{setDescription(e.target.value)}}></textarea>
           </div>
         </div>
         <div className="upload-body bg-white/5 backdrop-blur-lg" onClick={handleClick}>
           <span className="upload-icon"><FaFileUpload/></span>
           <p className="font-bold text-[20px]">Drag and Drop your Resume</p>
-          <p className="sub-text">PDF or DOCX 5MB</p>
+          <p className="sub-text">PDF file only for client-side parsing</p>
           <input
           type="file"
           ref={fileInputRef}
@@ -197,7 +235,7 @@ export default function Home() {
             desc:"Receive actionable improvements instantly"
           }
         ].map((item,index)=>(
-          <div className="bg-white/5 m-20 rounded-2xl p-6 border border-white/10 hover:scale-105 transition">
+          <div className="bg-white/5 m-20 rounded-2xl p-6 border border-white/10 hover:scale-105 transition" key={index}>
             <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
             <p className="text-gray-400">{item.desc}</p>
           </div>
