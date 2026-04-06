@@ -51,13 +51,17 @@ export default function Home() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to parse PDF');
-      }
+      const errorText = await response.text();
+      console.error("API Error Response:", errorText);
+      throw new Error("Failed to parse PDF");
+    }
       
-      const { text } = await response.json();
-      console.log(text);
-      const analysis = await analyzeResume(text,jobrole,experience,description);
+      const data = await response.json();
+      if (!data.text) {
+      throw new Error("No text returned from API");
+    }
+      console.log(data.text);
+      const analysis = await analyzeResume(data.text,jobrole,experience,description);
       setAnalysis(analysis);
     }
     catch(error){
