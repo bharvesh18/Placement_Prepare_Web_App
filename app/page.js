@@ -5,6 +5,7 @@ import {analyzeResume} from "../services/geminiService"
 import {motion} from "framer-motion"
 import { FaFilePdf } from "react-icons/fa";
 import { FaEye } from "react-icons/fa";
+import { ImCross } from "react-icons/im";
 export default function Home() {
   const fileInputRef=useRef(null);
   const [file,setFile]=useState(null);
@@ -169,6 +170,10 @@ export default function Home() {
           <div className="bg-white/5 m-20 rounded-2xl p-6 border border-white/10 hover:scale-105 transition">
             <h3 className="text-white text-2xl font-semibold">Keyword Optimization</h3>
             <p className="text-green-400 text-[15px]">{analysis.suggestions}</p>
+          </div>
+          <div className="bg-white/5 m-20 rounded-2xl p-6 border border-white/10 hover:scale-105 transition">
+            <h3 className="text-white text-2xl font-semibold">Top 3 improvements:</h3>
+            <p className="text-green-400 text-[15px]">{analysis.topfixes}</p>
           </div>
         </div>)
       }
