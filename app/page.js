@@ -23,6 +23,8 @@ async function extractText(file) {
 
   const arrayBuffer = await file.arrayBuffer();
 
+  pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+
   const pdf = await pdfjsLib.getDocument({
     data: arrayBuffer,
     disableWorker: true,

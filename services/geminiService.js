@@ -1,11 +1,5 @@
-import {GoogleGenAI, Type} from "@google/genai"
-import {z} from "zod"
-import {zodToJsonSchema} from "zod-to-json-schema"
-/*
-We are initializing a AI model which is in my case is Google Gemini AI services,
-by setting up a API key which is stored in my .env folder for safety purposes
-*/
-const ai=new GoogleGenAI({apiKey:process.env.NEXT_PUBLIC_GEMINI_API_KEY})
+import {GoogleGenAI} from "@google/genai"
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 /*
 We want a section-wise feedback of resume not a generic response, it should include a score of quality and impact,
 brief about its strengths and limitations, check whether the skills, education, experience, projects are in the
@@ -14,16 +8,6 @@ keyword optimization.
 That's why we are giving the prompt for a structured JSON ouptut having all these things mentioned in it and which
 can be easily extractable and formattable on our front-end too.
 */
-const geminiResponseSchema=z.object({
-    score:z.number().int().min(1).max(100),
-    summary:z.string(),
-    strengths:z.string(),
-    limitations:z.string(),
-    flowOrder:z.string(),
-    suggestions:z.string(),
-    formattingSuggestion:z.string(),
-    keywordOptimization:z.string()
-})
 export async function analyzeResume(resumecontent,jobrole,exp,desc) {
     try{
         /*
