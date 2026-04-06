@@ -56,6 +56,7 @@ export default function Home() {
       }
       
       const { text } = await response.json();
+      console.log(text);
       const analysis = await analyzeResume(text,jobrole,experience,description);
       setAnalysis(analysis);
     }
