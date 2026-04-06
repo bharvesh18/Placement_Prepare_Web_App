@@ -5,7 +5,7 @@ This is the API route of parse-pdf which handles our request for parsing the tex
 and send the extracted text back again to page.js for further analysis by the GEMINI model in
 the backend.
 */
-import pdfParse from "pdf-parse";
+import * as pdfParse from "pdf-parse";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
