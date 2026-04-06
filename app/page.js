@@ -5,7 +5,6 @@ import {analyzeResume} from "../services/geminiService"
 import {motion} from "framer-motion"
 import { FaFilePdf } from "react-icons/fa";
 import { FaEye } from "react-icons/fa";
-import { ImCross } from "react-icons/im";
 export default function Home() {
   const fileInputRef=useRef(null);
   const [file,setFile]=useState(null);
