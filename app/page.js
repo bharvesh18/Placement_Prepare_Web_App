@@ -23,6 +23,12 @@ async function extractText(file) {
 
   const arrayBuffer = await file.arrayBuffer();
 
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  } catch (e) {
+    // Worker already configured
+  }
+
   const pdf = await pdfjsLib.getDocument({
     data: arrayBuffer,
     disableWorker: true,
