@@ -5,6 +5,7 @@ import {motion} from "framer-motion"
 import { FaFilePdf } from "react-icons/fa";
 import { FaEye } from "react-icons/fa";
 import { ImCross } from "react-icons/im";
+
 export default function Home() {
   const fileInputRef=useRef(null);
   const [file,setFile]=useState(null);
@@ -14,34 +15,11 @@ export default function Home() {
   const [jobrole,setJobRole]=useState(null);
   const [experience,setExperience]=useState(null);
   const [description,setDescription]=useState(null);
+
   const handleClick=()=>{
     fileInputRef.current.click();
   }
 
-async function extractText(file) {
-   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf");
-
-  const arrayBuffer = await file.arrayBuffer();
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc = null;
-
-  const pdf = await pdfjsLib.getDocument({
-    data: arrayBuffer,
-    disableWorker: true,
-  }).promise;
-
-  let text = "";
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-
-    const strings = content.items.map(item => item.str || "");
-    text += strings.join(" ");
-  }
-
-  return text;
-}
   const handleFileChange=(e)=>{
     /*
     This function sets the file state to the uploaded file and creates a object URl which can 
@@ -68,38 +46,41 @@ async function extractText(file) {
     state to the generated analysis.
     */
     try{
-      setError(null);
-      if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
-        throw new Error('Client-side parsing only supports PDF files right now.');
+      const reader=new FileReader();
+      reader.onload=async(e)=>{
+        let content=e.target?.result;
+        const mimeType=file.type||'text/plain'
+        if(mimeType!=='text/plain'){
+          content=content.split(',')[1];
+        }
+        try{
+          const result=await fetch('/api/analyze-resume',{
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+              resumecontent:content,
+              jobrole:jobrole,
+              exp:experience,
+              description:description,
+              mimeType:mimeType,
+              filename:file.name
+            })
+          })
+          const data=await result.json();
+          console.log(data);
+          setAnalysis(data);
+          
+        }
+        catch(error){
+          alert(`Error happened while analysing resume: ${error}`)
+        }
       }
-
-      const text = await extractText(file);
-      if (!text.trim()) {
-        throw new Error('Unable to extract text from the selected PDF.');
-      }
-
-      const response = await fetch('/api/analyze-resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          jobrole,
-          experience,
-          description,
-        }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to analyze resume');
-      }
-
-      setAnalysis(result);
+      reader.readAsDataURL(file);
     }
     catch(error){
-      setError(error?.message || 'Error happened while analysing resume')
-      setAnalysis(null)
-      console.error('Resume analysis error:', error)
+      alert(error);
     }
   }
   const clearSelection=(e)=>{
